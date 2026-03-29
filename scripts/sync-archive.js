@@ -21,6 +21,8 @@ function parseArgs() {
     batchSize: null,
     dryRun: false,
     help: false,
+    stdin: false,
+    demo: false,
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -30,6 +32,10 @@ function parseArgs() {
       config.batchSize = parseInt(args[++i], 10);
     } else if (args[i] === '--dry-run') {
       config.dryRun = true;
+    } else if (args[i] === '--stdin') {
+      config.stdin = true;
+    } else if (args[i] === '--demo') {
+      config.demo = true;
     } else if (args[i] === '--help' || args[i] === '-h') {
       config.help = true;
     }
