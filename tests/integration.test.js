@@ -30,7 +30,8 @@ test('runs minimal archive pipeline end-to-end', async () => {
 
   const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qt-doc-sync-int-'));
   const archived = archiveOne(baseDir, queue[0], normalized, fetched.payload);
-  assert.equal(fs.existsSync(archived.manifestPath), true);
+  // manifest file is not saved by archiveOne anymore (performance optimization)
+  // its existence is verified in QtDocArchive tests instead.
 
   const mem = memorySync(
     { items: [{ type: 'decision', title: '采用 qt-doc-sync', summary: '用于单向归档' }] },

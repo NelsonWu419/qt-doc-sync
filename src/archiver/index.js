@@ -62,7 +62,8 @@ function archiveOne(baseDir, doc, normalized, raw, options = {}) {
     archivedAt: new Date().toISOString(),
     historyPath,
   };
-  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+  // manifest saving is now handled by the caller to avoid double writes
+  // and support periodic saves during batch runs.
 
   return { rawDir, normalizedDir, historyDir, historyPath, manifestPath };
 }

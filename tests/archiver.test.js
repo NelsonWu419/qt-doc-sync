@@ -14,17 +14,16 @@ test('writes raw, normalized and history files', () => {
     meta: { title: '测试文档', obj_type: 'doc' },
   };
   const raw = { text: 'hello' };
-
-  const out = archiveOne(baseDir, doc, normalized, raw);
+  const manifest = { documents: {} };
+  const out = archiveOne(baseDir, doc, normalized, raw, { manifest });
 
   assert.equal(fs.existsSync(path.join(out.rawDir, 'payload.json')), true);
   assert.equal(fs.existsSync(path.join(out.normalizedDir, 'content.md')), true);
   assert.equal(fs.existsSync(path.join(out.normalizedDir, 'schema.json')), true);
   assert.equal(fs.existsSync(path.join(out.normalizedDir, 'meta.json')), true);
   assert.equal(fs.existsSync(out.historyPath), true);
-  assert.equal(fs.existsSync(out.manifestPath), true);
-
-  const manifest = JSON.parse(fs.readFileSync(out.manifestPath, 'utf8'));
+  
+  // Verify manifest object was updated
   assert.equal(manifest.checkpoint.doc_token, 'doc_001');
   assert.equal(manifest.documents.doc_001.historyPath, out.historyPath);
 });

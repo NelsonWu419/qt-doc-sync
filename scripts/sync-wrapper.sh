@@ -17,7 +17,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # 默认配置
-TARGET_DIR="${TARGET_DIR:-$ROOT_DIR/company-docs/01-飞书同步}"
+TARGET_DIR="${TARGET_DIR:-$ROOT_DIR/company-docs/01-feishu-archive}"
 BATCH_SIZE="${BATCH_SIZE:-20}"
 DRY_RUN="${DRY_RUN:-false}"
 

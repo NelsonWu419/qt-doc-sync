@@ -129,7 +129,7 @@ class QtDocArchive {
   async loadSourceItems() {
     if (this.sourceItems && this.sourceItems.length > 0) return this.sourceItems;
     const searchResults = await this.runtime.searchDocs();
-    return mapSearchItemsToSourceItems(searchResults);
+    return searchResults;
   }
 
   async fetchByDoc(doc) {
@@ -192,11 +192,22 @@ class QtDocArchive {
       this.stats.discovered = limitedRecords.length;
 
       const queue = diffPlan(limitedRecords, this.manifest);
-      this.stats.queued = queue.length;
-      this.stats.unchanged = limitedRecords.length - queue.length;
+      
+      // Resume from checkpoint if exists
+      const checkpointToken = this.manifest.checkpoint?.doc_token;
+      let actualQueue = queue;
+      if (checkpointToken && queue.some(d => d.doc_token === checkpointToken)) {
+        const index = queue.findIndex(d => d.doc_token === checkpointToken);
+        actualQueue = queue.slice(index + 1);
+        this.log(`[断点续传] 从 ${checkpointToken} 之后恢复，剩余数量: ${actualQueue.length}`);
+      }
+
+      this.stats.queued = actualQueue.length;
+      this.stats.unchanged = limitedRecords.length - actualQueue.length;
 
       let memoryCount = 0;
-      for (const doc of queue) {
+      let processedSinceSave = 0;
+      for (const doc of actualQueue) {
         try {
           const fetched = await guarded(() => this.fetchByDoc(doc), { delayMs: 10, retries: 1 });
           if (fetched.status === 'unsupported') {
@@ -242,6 +253,12 @@ class QtDocArchive {
 
           this.stats.archived += 1;
           if (doc.status === 'updated') this.stats.updated += 1;
+
+          processedSinceSave += 1;
+          if (processedSinceSave >= 10) {
+            await this.saveManifest();
+            processedSinceSave = 0;
+          }
         } catch (err) {
           this.stats.failed += 1;
           await this.log(`archive failed: ${doc.doc_token} | ${err.message}`);
