@@ -12,6 +12,7 @@ const { guarded } = require('../src/guard');
 const { buildPreflightPlan, summarizePreflight } = require('../src/auth');
 const { mapSearchItemsToSourceItems } = require('../src/feishu-adapter');
 const { createOpenClawRuntime } = require('../src/runtime-openclaw');
+const { computeDocumentHashes } = require('../src/utils/hash');
 
 // CLI 参数解析
 function parseArgs() {
@@ -168,11 +169,18 @@ class QtDocArchive {
         return blockedSummary;
       }
 
-      const records = discover(sourceItems).map((r) => ({
-        ...r,
-        content_hash: r.doc_token,
-        schema_hash: r.obj_type,
-      }));
+      const records = discover(sourceItems).map((r) => {
+        const hashes = computeDocumentHashes({
+          content: r.content ?? r.payload?.text ?? r.doc_token,
+          schema: r.schema ?? { obj_type: r.obj_type },
+        });
+
+        return {
+          ...r,
+          content_hash: hashes.contentHash,
+          schema_hash: hashes.schemaHash,
+        };
+      });
       
       // 应用批次大小限制
       let limitedRecords = records;
