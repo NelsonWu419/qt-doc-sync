@@ -59,7 +59,7 @@ qt-doc-sync - 飞书文档单向归档工具
 
 示例:
   node sync-archive.js --dry-run
-  node sync-archive.js --target-dir /path/to/archive --batch-size 50
+  node sync-archive.js --target-dir /path/to/archive --batch-size 20
 `);
 }
 
