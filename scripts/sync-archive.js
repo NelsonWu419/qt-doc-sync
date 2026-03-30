@@ -279,15 +279,17 @@ if (require.main === module) {
     process.exit(0);
   }
   
-  const app = new QtDocArchive([
-    {
-      obj_token: 'demo_doc_001',
-      title: 'Demo Document',
-      obj_type: 'docx',
-      parent_token: 'root',
-      update_time: new Date().toISOString(),
-    },
-  ]);
+  const app = new QtDocArchive(
+    cliConfig.demo ? [
+      {
+        obj_token: 'demo_doc_001',
+        title: 'Demo Document',
+        obj_type: 'docx',
+        parent_token: 'root',
+        update_time: new Date().toISOString(),
+      },
+    ] : []
+  );
   app.run().catch(() => {
     process.exitCode = 1;
   });
