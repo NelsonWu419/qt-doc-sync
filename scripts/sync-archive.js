@@ -21,6 +21,7 @@ function parseArgs() {
   const config = {
     targetDir: null,
     batchSize: null,
+    runtime: 'openclaw',
     dryRun: false,
     help: false,
     stdin: false,
@@ -33,13 +34,15 @@ function parseArgs() {
       config.targetDir = args[++i];
     } else if (args[i] === '--batch-size' && args[i + 1]) {
       config.batchSize = parseInt(args[++i], 10);
+    } else if (args[i] === '--runtime' && args[i + 1]) {
+      config.runtime = args[++i];
     } else if (args[i] === '--dry-run') {
       config.dryRun = true;
     } else if (args[i] === '--stdin') {
       config.stdin = true;
     } else if (args[i] === '--demo') {
       config.demo = true;
-    } else if (args[i] === '--verbose') {
+    } else if (args[i] === '--verbose' || args[i] === '-v') {
       config.verbose = true;
     } else if (args[i] === '--help' || args[i] === '-h') {
       config.help = true;
