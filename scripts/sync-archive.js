@@ -25,6 +25,7 @@ function parseArgs() {
     help: false,
     stdin: false,
     demo: false,
+    verbose: false,
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -38,6 +39,8 @@ function parseArgs() {
       config.stdin = true;
     } else if (args[i] === '--demo') {
       config.demo = true;
+    } else if (args[i] === '--verbose') {
+      config.verbose = true;
     } else if (args[i] === '--help' || args[i] === '-h') {
       config.help = true;
     }
@@ -88,6 +91,9 @@ class QtDocArchive {
 
     // Initialize logger
     logger.setLogPath(this.logPath);
+    if (cliConfig.verbose) {
+      logger.level = 'debug';
+    }
 
     this.manifest = { documents: {}, runs: [] };
     this.stats = {

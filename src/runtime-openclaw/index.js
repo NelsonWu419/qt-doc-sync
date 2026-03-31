@@ -29,11 +29,15 @@ function createOpenClawRuntime(deps = {}) {
     return new Promise((resolve) => {
       const callId = Math.random().toString(36).substring(7);
       const call = { tool, params, callId };
+      
+      logger.debug(`[Bridge] 发送工具调用: ${JSON.stringify(call)}`);
       process.stdout.write(`[TOOL_CALL] ${JSON.stringify(call)}\n`);
       
       let input = '';
       const onData = (chunk) => {
-        input += chunk.toString();
+        const str = chunk.toString();
+        logger.debug(`[Bridge] Stdin 收到片段: ${str}`);
+        input += str;
         
         // Split by lines and try to find a valid JSON response with matching callId
         const lines = input.split('\n');
@@ -44,6 +48,8 @@ function createOpenClawRuntime(deps = {}) {
           if (!line.trim()) continue;
           try {
             const response = JSON.parse(line.trim());
+            logger.debug(`[Bridge] 解析行: ${JSON.stringify(response)}`);
+
             // Support both flat response and { result: ... } or { data: ... }
             if (response.callId === callId) {
               process.stdin.removeListener('data', onData);
@@ -61,6 +67,7 @@ function createOpenClawRuntime(deps = {}) {
       // Safety timeout for bridge response (2 minutes)
       setTimeout(() => {
         process.stdin.removeListener('data', onData);
+        logger.warn(`工具调用超时 (${tool}): ${callId}`);
         resolve(null);
       }, 120000);
     });
@@ -79,7 +86,7 @@ function createOpenClawRuntime(deps = {}) {
       logger.info('开始搜索文档...');
       const result = deps.searchDocWiki 
         ? await deps.searchDocWiki({ action: 'search' })
-        : await runTool('feishu_search_doc_wiki', { action: 'search', page_size: 50 });
+        : await runTool('feishu_search_doc_wiki', { action: 'search', query: '', page_size: 50 });
         
       logger.info(`搜索工具原始响应: ${JSON.stringify(result, null, 2)}`);
       
