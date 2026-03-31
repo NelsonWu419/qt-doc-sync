@@ -1,23 +1,31 @@
 function classifyFeishuType(objType = '') {
   const t = String(objType).toUpperCase();
-  if (t === 'DOC') return 'doc';
-  if (t === 'DOCX') return 'docx';
-  if (t === 'SHEET') return 'sheet';
-  if (t === 'BITABLE') return 'bitable';
-  if (t === 'WIKI') return 'wiki';
-  if (t === 'MINDNOTE') return 'mindnote';
-  return String(objType || '').toLowerCase() || 'unknown';
+  let result;
+  if (t === 'DOC') result = 'doc';
+  else if (t === 'DOCX') result = 'docx';
+  else if (t === 'SHEET') result = 'sheet';
+  else if (t === 'BITABLE') result = 'bitable';
+  else if (t === 'WIKI') result = 'wiki';
+  else if (t === 'MINDNOTE') result = 'mindnote';
+  else result = String(objType || '').toLowerCase() || 'unknown';
+
+  return result;
 }
 
 function mapSearchItemsToSourceItems(items = []) {
-  return items.map((item) => ({
-    obj_token: item.obj_token || item.token || item.doc_token,
-    title: item.title || item.title_highlighted || item.obj_token || item.token || item.doc_token,
-    obj_type: classifyFeishuType(item.obj_type || item.doc_type || item.doc_types),
-    parent_token: item.parent_token || null,
-    update_time: item.update_time || item.create_time || null,
-  }));
+  return items.map((item) => {
+    const obj_type = classifyFeishuType(item.obj_type || item.doc_type || item.doc_types);
+    const mapped = {
+      obj_token: item.obj_token || item.token || item.doc_token,
+      title: item.title || item.title_highlighted || item.obj_token || item.token || item.doc_token,
+      obj_type: obj_type,
+      parent_token: item.parent_token || null,
+      update_time: item.update_time || item.create_time || null,
+    };
+    return mapped;
+  });
 }
+
 
 function buildDocFetchRequest(doc) {
   const type = String(doc.obj_type || '').toLowerCase();

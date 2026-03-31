@@ -13,6 +13,7 @@ const { buildPreflightPlan, summarizePreflight } = require('../src/auth');
 const { mapSearchItemsToSourceItems } = require('../src/feishu-adapter');
 const { createOpenClawRuntime } = require('../src/runtime-openclaw');
 const { computeDocumentHashes } = require('../src/utils/hash');
+const { logger } = require('../src/utils/logger');
 
 // CLI 参数解析
 function parseArgs() {
@@ -84,6 +85,10 @@ class QtDocArchive {
     this.batchSize = options.batchSize || cliConfig.batchSize || null;
     this.manifestPath = path.join(this.targetDirectory, 'manifest.json');
     this.logPath = path.join(this.targetDirectory, 'logs', 'sync.log');
+
+    // Initialize logger
+    logger.setLogPath(this.logPath);
+
     this.manifest = { documents: {}, runs: [] };
     this.stats = {
       discovered: 0,
@@ -113,11 +118,7 @@ class QtDocArchive {
   }
 
   async log(line) {
-    const msg = `[${new Date().toISOString()}] ${line}`;
-    console.log(msg);
-    if (!this.dryRun) {
-      await fs.appendFile(this.logPath, msg + '\n').catch(() => {});
-    }
+    logger.info(line);
   }
 
   async preflight(types = ['docx']) {
@@ -127,8 +128,13 @@ class QtDocArchive {
   }
 
   async loadSourceItems() {
-    if (this.sourceItems && this.sourceItems.length > 0) return this.sourceItems;
+    if (this.sourceItems && this.sourceItems.length > 0) {
+      await this.log(`[Discovery] 使用预设的 ${this.sourceItems.length} 个项目`);
+      return this.sourceItems;
+    }
+    await this.log('[Discovery] 正在从 API 加载项目...');
     const searchResults = await this.runtime.searchDocs();
+    await this.log(`[Discovery] API 返回了 ${searchResults.length} 个有效项目`);
     return searchResults;
   }
 

@@ -1,9 +1,11 @@
 const { computeContentHash, stableStringify } = require('../utils/hash');
+const { logger } = require('../utils/logger');
 
 function diffPlan(records, manifest) {
   const docs = (manifest && manifest.documents) || {};
+  logger.info(`比较 ${records.length} 条记录与 manifest (${Object.keys(docs).length} 条)...`);
 
-  return records
+  const results = records
     .map((r) => {
       const normalizedContentHash = r.content_hash || computeContentHash(r.content ?? r.payload?.text ?? r.normalized_content ?? r);
       const prev = docs[r.doc_token];
@@ -15,8 +17,11 @@ function diffPlan(records, manifest) {
 
       if (!changed) return { ...r, content_hash: normalizedContentHash, status: 'unchanged' };
       return { ...r, content_hash: normalizedContentHash, status: 'updated' };
-    })
-    .filter((r) => r.status !== 'unchanged');
+    });
+
+  const changed = results.filter((r) => r.status !== 'unchanged');
+  logger.info(`变更状态: 新增=${results.filter(r => r.status === 'new').length}, 更新=${results.filter(r => r.status === 'updated').length}, 未变=${results.filter(r => r.status === 'unchanged').length}`);
+  return changed;
 }
 
 module.exports = { diffPlan, computeContentHash, stableStringify };

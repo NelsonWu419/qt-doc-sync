@@ -1,4 +1,5 @@
 const { mapSearchItemsToSourceItems } = require('../feishu-adapter');
+const { logger } = require('../utils/logger');
 
 function normalizeSearchResults(result) {
   // Support various nesting levels: result.items, result.results, result.data.items, etc.
@@ -75,14 +76,30 @@ function createOpenClawRuntime(deps = {}) {
     },
 
     async searchDocs() {
+      logger.info('开始搜索文档...');
       const result = deps.searchDocWiki 
         ? await deps.searchDocWiki({ action: 'search' })
         : await runTool('feishu_search_doc_wiki', { action: 'search', page_size: 50 });
         
+      logger.info(`搜索工具原始响应: ${JSON.stringify(result, null, 2)}`);
+      
       const items = normalizeSearchResults(result);
-      return mapSearchItemsToSourceItems(items).filter((item) =>
-        ['doc', 'docx', 'wiki', 'mindnote'].includes(String(item.obj_type || '').toLowerCase())
-      );
+      logger.info(`归一化后项目数量: ${items.length}`);
+      
+      const mapped = mapSearchItemsToSourceItems(items);
+      logger.info(`映射后项目数量: ${mapped.length}`);
+
+      const filtered = mapped.filter((item) => {
+        const type = String(item.obj_type || '').toLowerCase();
+        const ok = ['doc', 'docx', 'wiki', 'mindnote'].includes(type);
+        if (!ok) {
+          logger.info(`过滤掉非文本类型: ${item.title} (${item.obj_type})`);
+        }
+        return ok;
+      });
+      
+      logger.info(`最终有效文档数量: ${filtered.length}`);
+      return filtered;
     },
 
     async fetchDoc(docId) {
