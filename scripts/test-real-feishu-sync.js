@@ -18,8 +18,9 @@ async function searchDocWiki(params) {
     page_size: 50
   });
   
-  console.log('[Feishu Bridge] 搜索结果:', result?.data?.items?.length || 0, '个文档');
-  return result?.data || { items: [] };
+  const items = result?.data?.items || result?.items || [];
+  console.log('[Feishu Bridge] 搜索结果:', items.length, '个文档');
+  return result;
 }
 
 async function fetchDoc(docToken) {
@@ -35,36 +36,47 @@ async function fetchDoc(docToken) {
 
 // 执行飞书工具（通过 OpenClaw 消息系统）
 function runFeishuTool(toolName, params) {
-  return new Promise((resolve, reject) => {
-    // 通过 stdout 输出工具调用请求
+  return new Promise((resolve) => {
+    const callId = Math.random().toString(36).substring(7);
     const call = {
       tool: toolName,
-      params: params
+      params: params,
+      callId: callId
     };
     
-    console.log('[TOOL_CALL]', JSON.stringify(call));
+    // 通过 stdout 输出工具调用请求
+    process.stdout.write(`[TOOL_CALL] ${JSON.stringify(call)}\n`);
     
     // 等待 stdin 输入结果（由 OpenClaw 注入）
     let inputData = '';
-    process.stdin.on('data', chunk => {
+    const onData = (chunk) => {
       inputData += chunk.toString();
-    });
-    
-    process.stdin.on('end', () => {
-      try {
-        const result = JSON.parse(inputData || '{}');
-        resolve(result);
-      } catch (e) {
-        console.error('[TOOL_CALL] 解析结果失败:', e.message);
-        resolve({});
+      const lines = inputData.split('\n');
+      inputData = lines.pop();
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const response = JSON.parse(line.trim());
+          if (response.callId === callId) {
+            process.stdin.removeListener('data', onData);
+            resolve(response.result !== undefined ? response.result : (response.data !== undefined ? response.data : response));
+            return;
+          }
+        } catch (e) {
+          // Skip invalid JSON
+        }
       }
-    });
+    };
+    
+    process.stdin.on('data', onData);
     
     // 超时保护
     setTimeout(() => {
+      process.stdin.removeListener('data', onData);
       console.error('[TOOL_CALL] 超时，返回空结果');
       resolve({});
-    }, 30000);
+    }, 60000);
   });
 }
 

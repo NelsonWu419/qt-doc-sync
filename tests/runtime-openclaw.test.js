@@ -47,6 +47,50 @@ test('searchDocs filters out non-text types in text-only MVP', async () => {
   assert.equal(out[0].obj_token, 'doc_001');
 });
 
+test('searchDocs handles data.items nesting', async () => {
+  const runtime = createOpenClawRuntime({
+    searchDocWiki: async () => ({
+      data: {
+        items: [{ obj_token: 'nested_001', title: 'Nested Item', obj_type: 'DOCX' }]
+      }
+    }),
+  });
+
+  const out = await runtime.searchDocs();
+  assert.equal(out.length, 1);
+  assert.equal(out[0].obj_token, 'nested_001');
+});
+
+test('searchDocs handles results array nesting', async () => {
+  const runtime = createOpenClawRuntime({
+    searchDocWiki: async () => ({
+      results: [{ obj_token: 'res_001', title: 'Result Item', obj_type: 'DOCX' }]
+    }),
+  });
+
+  const out = await runtime.searchDocs();
+  assert.equal(out.length, 1);
+  assert.equal(out[0].obj_token, 'res_001');
+});
+
+test('searchDocs handles result_meta items from search API', async () => {
+  const runtime = createOpenClawRuntime({
+    searchDocWiki: async () => ({
+      items: [
+        {
+          result_meta: { obj_token: 'meta_001', obj_type: 'DOCX' },
+          title_highlighted: 'Highlighted Title'
+        }
+      ]
+    }),
+  });
+
+  const out = await runtime.searchDocs();
+  assert.equal(out.length, 1);
+  assert.equal(out[0].obj_token, 'meta_001');
+  assert.equal(out[0].title, 'Highlighted Title');
+});
+
 test('fetchDoc normalizes markdown field into content', async () => {
   const runtime = createOpenClawRuntime({
     fetchDoc: async () => ({ title: '测试文档', markdown: '# 标题\n正文' }),

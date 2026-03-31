@@ -1,11 +1,17 @@
 const { mapSearchItemsToSourceItems } = require('../feishu-adapter');
 
 function normalizeSearchResults(result) {
-  const items = Array.isArray(result?.items)
-    ? result.items
-    : Array.isArray(result?.results)
-      ? result.results
-      : [];
+  // Support various nesting levels: result.items, result.results, result.data.items, etc.
+  const data = result?.data || result;
+  const items = Array.isArray(data?.items)
+    ? data.items
+    : Array.isArray(data?.results)
+      ? data.results
+      : Array.isArray(result?.items)
+        ? result.items
+        : Array.isArray(result?.results)
+          ? result.results
+          : [];
 
   return items.map((item) => item?.result_meta ? { ...item.result_meta, title: item.title_highlighted || item.title } : item);
 }
@@ -17,12 +23,6 @@ function createOpenClawRuntime(deps = {}) {
 
   // Helper to call a tool via the OpenClaw [TOOL_CALL] bridge
   async function runTool(tool, params) {
-    if (!process.stdin.isTTY && !deps.availableTools) {
-       // In a non-interactive/automation context, we can try to use the bridge
-       // However, to keep it simple for this MVP, we output the tool call
-       // and expect the platform to handle the exchange.
-    }
-    
     // For this specific environment, we use a simple console.log [TOOL_CALL] pattern
     // if searchDocWiki and fetchDoc aren't explicitly provided as functions.
     return new Promise((resolve) => {
@@ -33,21 +33,31 @@ function createOpenClawRuntime(deps = {}) {
       let input = '';
       const onData = (chunk) => {
         input += chunk.toString();
-        if (input.includes('\n')) {
+        
+        // Split by lines and try to find a valid JSON response with matching callId
+        const lines = input.split('\n');
+        // Keep the last partial line if any
+        input = lines.pop();
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
           try {
-            const response = JSON.parse(input.trim());
+            const response = JSON.parse(line.trim());
+            // Support both flat response and { result: ... } or { data: ... }
             if (response.callId === callId) {
               process.stdin.removeListener('data', onData);
-              resolve(response.result || response.data || response);
+              const actualResult = response.result !== undefined ? response.result : (response.data !== undefined ? response.data : response);
+              resolve(actualResult);
+              return;
             }
           } catch (e) {
-            // Wait for more data or handle parse error
+            // Not a valid JSON or not our response, skip
           }
         }
       };
       process.stdin.on('data', onData);
       
-      // Safety timeout for bridge response
+      // Safety timeout for bridge response (2 minutes)
       setTimeout(() => {
         process.stdin.removeListener('data', onData);
         resolve(null);

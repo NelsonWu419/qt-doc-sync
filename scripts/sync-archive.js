@@ -296,18 +296,19 @@ if (require.main === module) {
     process.exit(0);
   }
   
-  const app = new QtDocArchive(
-    cliConfig.demo ? [
-      {
-        obj_token: 'demo_doc_001',
-        title: 'Demo Document',
-        obj_type: 'docx',
-        parent_token: 'root',
-        update_time: new Date().toISOString(),
-      },
-    ] : []
-  );
-  app.run().catch(() => {
+  const demoItems = cliConfig.demo ? [
+    {
+      obj_token: 'demo_doc_001',
+      title: 'Demo Document',
+      obj_type: 'docx',
+      parent_token: 'root',
+      update_time: new Date().toISOString(),
+    },
+  ] : [];
+
+  const app = new QtDocArchive(demoItems);
+  app.run().catch((err) => {
+    console.error(`[Error] ${err.message}`);
     process.exitCode = 1;
   });
 }
