@@ -84,16 +84,38 @@ function createOpenClawRuntime(deps = {}) {
 
     async searchDocs() {
       logger.info('开始搜索文档...');
-      const result = deps.searchDocWiki 
-        ? await deps.searchDocWiki({ action: 'search' })
-        : await runTool('feishu_search_doc_wiki', { action: 'search', query: '', page_size: 50 });
+      let allItems = [];
+      let pageToken = null;
+      let hasMore = true;
+      let pageCount = 0;
+
+      while (hasMore) {
+        pageCount++;
+        const params = { action: 'search', query: '', page_size: 50 };
+        if (pageToken) {
+          params.page_token = pageToken;
+        }
+
+        const result = deps.searchDocWiki 
+          ? await deps.searchDocWiki(params)
+          : await runTool('feishu_search_doc_wiki', params);
         
-      logger.info(`搜索工具原始响应: ${JSON.stringify(result, null, 2)}`);
+        const data = result?.data || result;
+        const items = normalizeSearchResults(result);
+        allItems = allItems.concat(items);
+        
+        pageToken = data?.page_token || data?.next_page_token;
+        hasMore = data?.has_more === true && !!pageToken;
+
+        logger.info(`第 ${pageCount} 页搜索完成, 抓取到 ${items.length} 个项目, hasMore=${hasMore}`);
+        
+        // 安全限制，防止死循环 (假设最多 100 页)
+        if (pageCount >= 100) break;
+      }
+        
+      logger.info(`搜索结束，总计抓取到项目数量: ${allItems.length}`);
       
-      const items = normalizeSearchResults(result);
-      logger.info(`归一化后项目数量: ${items.length}`);
-      
-      const mapped = mapSearchItemsToSourceItems(items);
+      const mapped = mapSearchItemsToSourceItems(allItems);
       logger.info(`映射后项目数量: ${mapped.length}`);
 
       const filtered = mapped.filter((item) => {
