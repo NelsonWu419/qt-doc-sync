@@ -56,9 +56,11 @@ function createOpenClawRuntime(deps = {}) {
               const actualResult = response.result !== undefined ? response.result : (response.data !== undefined ? response.data : response);
               resolve(actualResult);
               return;
+            } else {
+              logger.debug(`[Bridge] 忽略无关 callId: ${response.callId || 'none'}`);
             }
           } catch (e) {
-            // Not a valid JSON or not our response, skip
+            logger.debug(`[Bridge] 忽略非 JSON 行: ${line.substring(0, 100)}...`);
           }
         }
       };
@@ -91,7 +93,8 @@ function createOpenClawRuntime(deps = {}) {
 
       while (hasMore) {
         pageCount++;
-        const params = { action: 'search', query: '', page_size: 50 };
+        // 将 page_size 降低到 20 以减少单次请求压力
+        const params = { action: 'search', query: '', page_size: 20 };
         if (pageToken) {
           params.page_token = pageToken;
         }
@@ -100,6 +103,11 @@ function createOpenClawRuntime(deps = {}) {
           ? await deps.searchDocWiki(params)
           : await runTool('feishu_search_doc_wiki', params);
         
+        if (result === null) {
+          logger.error('搜索工具返回 null (超时)。请检查：1. 飞书云文档权限是否已对当前机器人/用户开启；2. OpenClaw 平台工具响应是否正常。');
+          break; 
+        }
+
         const data = result?.data || result;
         const items = normalizeSearchResults(result);
         allItems = allItems.concat(items);
@@ -109,7 +117,6 @@ function createOpenClawRuntime(deps = {}) {
 
         logger.info(`第 ${pageCount} 页搜索完成, 抓取到 ${items.length} 个项目, hasMore=${hasMore}`);
         
-        // 安全限制，防止死循环 (假设最多 100 页)
         if (pageCount >= 100) break;
       }
         
