@@ -4,17 +4,23 @@ const { mapSearchItemsToSourceItems } = require('../feishu-adapter');
 
 function createFeishuCLIRuntime(deps = {}) {
   const exec = deps.execSync || execSync;
+  const binary = 'lark-cli';
 
   return {
     async checkTools(tools = []) {
-      return tools.map(tool => {
-        try {
-          exec(`which ${tool}`, { stdio: 'ignore' });
-          return { tool, ok: true, auth_status: 'ok' };
-        } catch {
-          return { tool, ok: false, auth_status: 'missing' };
-        }
-      });
+      let binOk = false;
+      try {
+        exec(`${binary} --version`, { stdio: 'ignore' });
+        binOk = true;
+      } catch {
+        binOk = false;
+      }
+
+      return tools.map(tool => ({
+        tool,
+        ok: binOk,
+        auth_status: binOk ? 'ok' : 'missing'
+      }));
     },
     async searchDocs() {
       logger.info('开始在 CLI 环境中搜索文档...');
@@ -26,13 +32,27 @@ function createFeishuCLIRuntime(deps = {}) {
       while (hasMore) {
         pageCount++;
         try {
-          const cmd = `feishu api get /open-apis/suite/docs-api/search/object?page_size=20${pageToken ? '&page_token=' + pageToken : ''}`;
+          // Use high-level docs +search command
+          const cmd = `${binary} docs +search --page-size 20${pageToken ? ' --page-token \'' + pageToken + '\'' : ''} --format json`;
           const stdout = exec(cmd, { encoding: 'utf8', stdio: 'pipe' }).toString();
           const result = JSON.parse(stdout);
           
           const data = result.data || result;
-          const items = Array.isArray(data.items) ? data.items : [];
-          allItems = allItems.concat(items);
+          // lark-cli docs +search returns items in data.results
+          const items = Array.isArray(data.results) ? data.results : (Array.isArray(data.items) ? data.items : []);
+          
+          // Normalize items to match what mapSearchItemsToSourceItems expects
+          const normalizedItems = items.map(item => {
+            if (item.result_meta) {
+              return {
+                ...item.result_meta,
+                title: item.title_highlighted || item.title || item.result_meta.title
+              };
+            }
+            return item;
+          });
+
+          allItems = allItems.concat(normalizedItems);
           
           pageToken = data.page_token || '';
           hasMore = data.has_more && !!pageToken;
@@ -52,13 +72,15 @@ function createFeishuCLIRuntime(deps = {}) {
     },
     async fetchDoc(docId) {
       try {
-        const cmd = `feishu api get /open-apis/docx/v1/documents/${docId}/raw_content`;
+        // Use high-level docs +fetch command
+        const cmd = `${binary} docs +fetch --doc ${docId} --format json`;
         const stdout = exec(cmd, { encoding: 'utf8', stdio: 'pipe' }).toString();
         const result = JSON.parse(stdout);
         const data = result.data || result;
         return {
           title: docId,
-          content: data.content || ''
+          // lark-cli docs +fetch returns content in data.markdown
+          content: data.markdown || data.content || ''
         };
       } catch (e) {
         logger.error(`CLI fetchDoc error for ${docId}: ${e.message}`);

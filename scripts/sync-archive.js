@@ -21,7 +21,7 @@ function parseArgs() {
   const config = {
     targetDir: null,
     batchSize: null,
-    runtime: 'openclaw',
+    runtime: 'cli',
     dryRun: false,
     help: false,
     stdin: false,
@@ -71,7 +71,7 @@ qt-doc-sync - 飞书文档单向归档工具
 `);
 }
 
-const DEFAULT_TARGET_DIRECTORY = path.resolve(__dirname, '../../../company-docs/01-feishu-archive');
+const DEFAULT_TARGET_DIRECTORY = path.resolve(__dirname, '../company-docs/01-feishu-archive');
 const cliConfig = parseArgs();
 
 if (cliConfig.help) {

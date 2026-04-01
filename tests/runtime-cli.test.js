@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createFeishuCLIRuntime } = require('../src/runtime-cli');
 
-test('FeishuCLIRuntime checkTools reports missing when feishu command fails', async () => {
+test('FeishuCLIRuntime checkTools reports missing when lark-cli command fails', async () => {
   const mockDeps = {
     execSync: () => { throw new Error('command not found'); }
   };
@@ -20,7 +20,7 @@ test('FeishuCLIRuntime searchDocs parses CLI JSON output', async () => {
   });
   const mockDeps = {
     execSync: (cmd) => {
-      if (cmd.includes('api get')) return Buffer.from(mockOutput);
+      if (cmd.includes('api GET')) return Buffer.from(mockOutput);
       return Buffer.from('');
     }
   };
