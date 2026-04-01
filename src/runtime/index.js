@@ -1,3 +1,6 @@
+const { createOpenClawRuntime } = require('../runtime-openclaw');
+const { createFeishuCLIRuntime } = require('../runtime-cli');
+
 function createMockRuntime(config = {}) {
   const availableTools = new Set(config.availableTools || []);
   const searchResults = config.searchResults || [];
@@ -20,4 +23,14 @@ function createMockRuntime(config = {}) {
   };
 }
 
-module.exports = { createMockRuntime };
+function createRuntime(type, config = {}) {
+  if (type === 'cli') {
+    return createFeishuCLIRuntime(config);
+  }
+  if (type === 'mock') {
+    return createMockRuntime(config);
+  }
+  return createOpenClawRuntime(config);
+}
+
+module.exports = { createMockRuntime, createRuntime };

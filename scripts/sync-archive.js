@@ -11,7 +11,7 @@ const { buildSummary, formatSummary } = require('../src/reporter');
 const { guarded } = require('../src/guard');
 const { buildPreflightPlan, summarizePreflight } = require('../src/auth');
 const { mapSearchItemsToSourceItems } = require('../src/feishu-adapter');
-const { createOpenClawRuntime } = require('../src/runtime-openclaw');
+const { createRuntime } = require('../src/runtime');
 const { computeDocumentHashes } = require('../src/utils/hash');
 const { logger } = require('../src/utils/logger');
 
@@ -61,6 +61,7 @@ qt-doc-sync - 飞书文档单向归档工具
 选项:
   --target-dir <path>    归档目标目录（默认：./company-docs/01-feishu-archive）
   --batch-size <number>  批次处理数量（默认：全部）
+  --runtime <type>       运行环境策略，可选：openclaw, cli（默认：openclaw）
   --dry-run              空跑模式，不实际写入文件
   --help, -h             显示帮助信息
 
@@ -81,7 +82,7 @@ if (cliConfig.help) {
 class QtDocArchive {
   constructor(sourceItems = [], options = {}) {
     this.sourceItems = sourceItems;
-    this.runtime = options.runtime || createOpenClawRuntime({
+    this.runtime = options.runtime || createRuntime(cliConfig.runtime, {
       searchDocWiki: options.searchDocWiki,
       fetchDoc: options.fetchDoc,
       availableTools: options.availableTools,
